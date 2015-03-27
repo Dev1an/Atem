@@ -13,6 +13,10 @@
     "blackmagic",
     "blackmagicdesign"
   ],
-  "author": "Devian",
-  "license": "ISC"
+  "author": "devian",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Dev1an/Atem.git"
+  }
 }
