@@ -682,7 +682,6 @@ function Device(atemIpAddress){
 	
 	this.on('InPr', function(d) {
 		const sourceID = d.readUInt16BE(0);
-		const sourceInfo = lookupSourceID(sourceID);
 
 		const longName = parseString(d.slice(2,22));
 		const shortName = parseString(d.slice(22, 26));
@@ -696,13 +695,12 @@ function Device(atemIpAddress){
 		 * @event Device#sourceConfiguration
 		 * @property {SourceID} sourceID the identifier of the source
 		 * @property {SourceConfiguration} sourceConfiguration the new configuration of the source
-		 * @property {Object} sourceInfo
 		 */
 		atem.emit('sourceConfiguration', sourceID, {
 			name: longName,
 			abbreviation: shortName,
 			'videoInterface': videoInterface
-		}, sourceInfo);
+		});
 	});
 
 	this.on('TlIn', function(d) {
@@ -1015,5 +1013,6 @@ Command.prototype.serialize = function() {
 
 
 Device.ConnectionState = ConnectionState;
+Device.getSourceInfo = lookupSourceID;
 
 module.exports = Device;
