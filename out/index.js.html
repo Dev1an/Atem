@@ -42,6 +42,18 @@ const flags = {
 	ack:     16
 };
 
+const ConnectionState = {
+	closed: {description: 'Not connected'},
+	attempting: {description: 'Attempting to connect'},
+	establishing: {description: 'Establishing connection'},
+	open: {description: 'connected'}
+};
+for(name in ConnectionState) {
+	(function(name) {
+		ConnectionState[name].toString = function() {return name};
+	})(name);
+}
+
 /**
  * A string describing the video interface. Possible values are internal, sdi, hdmi, component
  * @typedef {string} VideoInterface
@@ -116,7 +128,7 @@ function lookupSourceID(id) {
 	}
 
 	else if (id &lt; 1000) {
-		return {type: 'input', index: id-1}
+		return {type: 'inputs', index: id-1}
 	}
 
 	else if (id === 1000) {
@@ -128,32 +140,32 @@ function lookupSourceID(id) {
 	}
 
 	else if (id &lt; 3010) {
-		return {type: 'color', index: id%1000 - 1}
+		return {type: 'colors', index: id%1000 - 1}
 	}
 
 	else if (id &lt; 4010) {
 		if (id%10 === 0) {
-			return {type: 'mediaPlayer', index: (id - 3010) / 10 }
+			return {type: 'mediaPlayers', index: (id - 3010) / 10 }
 		}
 		else if (id%10 == 1) {
-			return {type: 'mediaPlayerKey', index: (id - 3011) / 10 }
+			return {type: 'mediaPlayerKeys', index: (id - 3011) / 10 }
 		}
 	}
 
 	else if (id &lt; 5010) {
-		return {type: 'keyMask', index: (id - 4010) / 10 }
+		return {type: 'keyMasks', index: (id - 4010) / 10 }
 	}
 
 	else if (id &lt; 7001) {
-		return {type: 'downStreamKeyMask', index: (id - 5010) / 10 }
+		return {type: 'downStreamKeyMasks', index: (id - 5010) / 10 }
 	}
 
 	else if (id &lt; 8001) {
-		return {type: 'cleanFeed', index: id - 7001 }
+		return {type: 'cleanFeeds', index: id - 7001 }
 	}
 
 	else if (id &lt; 10010) {
-		return {type: 'auxiliary', index: id - 8001 }
+		return {type: 'auxiliaries', index: id - 8001 }
 	}
 
 	else if (id == 10010) {
@@ -180,7 +192,7 @@ function Device(atemIpAddress){
 		throw new Error('use "new" to construct an ATEM Device');
 
 	/** Create a UDP v4 socket */
-	var socket = dgram.createSocket('udp4');
+	var socket;
 
 	/** Call the constructor of EventEmitter */
 	events.EventEmitter.call(this);
@@ -193,8 +205,16 @@ function Device(atemIpAddress){
 	Object.defineProperty(this, 'ip', {
 		set: function (ipString) {
 			if (net.isIPv4(ipString)) {
-				ip = ipString;
-				this.connect();
+				if (atem.state !== ConnectionState.closed) {
+					atem.disconnect(function() {
+						ip = ipString;
+						atem.connect();
+						atem.emit('addressChange', ip);
+					});
+				} else {
+					ip = ipString;
+					atem.emit('addressChange', ip);
+				}
 			}
 			else {
 				const err = new Error('Invalid IP address: ' + ipString);
@@ -203,15 +223,6 @@ function Device(atemIpAddress){
 		},
 		get: function () { return ip }
 	});
-
-	/**
-	 * The state of the connection  &lt;ul>
-	 * &lt;li> 0: Connecting &lt;/li>
-	 * &lt;li> 1: Data initialization &lt;/li>
-	 * &lt;li> 2: In conversation &lt;/li>
-	 * &lt;li> undefined: Not connected &lt;/li> &lt;/ul>
-	 * @typedef {Number} ConnectionState
-	 */
 
 	/**
 	 * The current state of the connection.
@@ -277,7 +288,7 @@ function Device(atemIpAddress){
 		 */
 		communicationTimeout,
 		ip,
-		state;
+		state = ConnectionState.closed;
 
 	/**
 	 * When an error is encountered during communication, this event will be fired.
@@ -375,7 +386,7 @@ function Device(atemIpAddress){
 				this.header.ls = ls;
 			}
 
-			if ( atem.state == 2 &amp;&amp; this.isSync() &amp;&amp; this.header.ls>0 &amp;&amp; commandQueue.length>0){
+			if ( atem.state == ConnectionState.open &amp;&amp; this.isSync() &amp;&amp; this.header.ls>0 &amp;&amp; commandQueue.length>0){
 				// first sync packet cannot contain data.
 				this.body.commands = this.body.commands.concat(commandQueue.slice(0));
 				commandQueue = [];
@@ -409,7 +420,7 @@ function Device(atemIpAddress){
 				}, 1000);
 			}
 
-			if (state != 0 &amp;&amp; this.isSync()){
+			if (state != ConnectionState.attempting &amp;&amp; this.isSync()){
 				ls = (ls+1) %0x10000;
 			}
 
@@ -421,7 +432,7 @@ function Device(atemIpAddress){
 			socket.send(packet, 0, packet.length, 9910, atem.ip);
 		}
 
-		if (this.isSync() &amp;&amp; state == 2){
+		if (this.isSync() &amp;&amp; state == ConnectionState.open){
 			clearInterval(syncInterval);
 			syncInterval = setInterval(sync, 600);
 		}
@@ -458,15 +469,15 @@ function Device(atemIpAddress){
 
 		if ((this.header.flags &amp; flags.unknown) == flags.unknown) console.log('Unknown Packet flag!');
 		
-		if (state === 0) {
+		if (state === ConnectionState.attempting) {
 			if (this.isSync()){
-				atem.state = 1;
+				atem.state = ConnectionState.establishing;
 				uid = this.header.uid;
 			}
 		} else
-		if (state === 1){
+		if (state === ConnectionState.establishing){
 			if (msg.length==12 &amp;&amp; !this.isConnect()){
-				atem.state = 2;
+				atem.state = ConnectionState.open;
 				clearInterval(syncInterval);
 				syncInterval = setInterval(sync, 600);
 			}
@@ -491,6 +502,9 @@ function Device(atemIpAddress){
 				 * @event Device#rawCommand
 				 * @type {Command}
 				 */
+				
+				// todo: check foreign sequence number, to prevent the event emitter
+				// from emitting the same message twice.
 				atem.emit('rawCommand', cmd);
 				atem.emit(cmd.name, cmd.data);
 			}
@@ -513,7 +527,7 @@ function Device(atemIpAddress){
 		const self = this;
 
 		incomingPackets.push(self);
-		if (state==0)
+		if (state == ConnectionState.attempting)
 			respond();
 		else
 			process.nextTick(respond);
@@ -568,7 +582,7 @@ function Device(atemIpAddress){
 
 	this.sendCommand = function(cmd) {
 		commandQueue = commandQueue.concat(cmd);
-		if (ls>0 &amp;&amp; state==2 &amp;&amp; !commandTimer){
+		if (ls>0 &amp;&amp; state==ConnectionState.open &amp;&amp; !commandTimer){
 			commandTimer = setTimeout(function() {
 				if (commandQueue.length > 0) sync();
 				commandTimer = undefined;
@@ -642,7 +656,7 @@ function Device(atemIpAddress){
 	 */
 	this.setProgram = function(sourceID) {
 		var data = new Buffer(4);
-		data.writeUInt32BE(sourceID);
+		data.writeUInt32BE(sourceID, 0);
 
 		const cmd = new Command('CPgI', data);
 		atem.sendCommand(cmd);
@@ -655,11 +669,27 @@ function Device(atemIpAddress){
 	 */
 	this.setPreview = function(source) {
 		var data = new Buffer(4);
-		data.writeUInt32BE(source);
+		data.writeUInt32BE(source, 0);
 
-		const cmd = new Command('CPgI', data);
+		const cmd = new Command('CPvI', data);
 		atem.sendCommand(cmd);
 	};
+	
+	/**
+	 * Change the auxiliary output
+	 * @param {SourceID} aux    
+	 * @param {SourceID} source 
+	 */
+	this.setAux = function(aux, source){
+		var data = new Buffer(8);
+		data[0] = 1;
+		data[1] = aux - 8001;
+		data.writeUInt16BE(source, 2);
+		data.writeUInt32BE(0, 4);
+
+		const cmd = new Command('CAuS', data);
+		atem.sendCommand(cmd);
+	}
 	
 	
 	
@@ -679,7 +709,6 @@ function Device(atemIpAddress){
 	
 	this.on('InPr', function(d) {
 		const sourceID = d.readUInt16BE(0);
-		const sourceInfo = lookupSourceID(sourceID);
 
 		const longName = parseString(d.slice(2,22));
 		const shortName = parseString(d.slice(22, 26));
@@ -693,13 +722,12 @@ function Device(atemIpAddress){
 		 * @event Device#sourceConfiguration
 		 * @property {SourceID} sourceID the identifier of the source
 		 * @property {SourceConfiguration} sourceConfiguration the new configuration of the source
-		 * @property {Object} sourceInfo the new configuration of the source
 		 */
 		atem.emit('sourceConfiguration', sourceID, {
 			name: longName,
 			abbreviation: shortName,
 			'videoInterface': videoInterface
-		}, sourceInfo);
+		});
 	});
 
 	this.on('TlIn', function(d) {
@@ -716,6 +744,28 @@ function Device(atemIpAddress){
 			atem.emit('inputTally', i-1, {
 				program: (d[i] &amp; 1) === 1,
 				preview: (d[i] &amp; 2) === 2
+			});
+		}
+	});
+
+	this.on('TlSr', function(data) {
+		const length = data.readUInt16BE(0)*3 + 2;
+		var source, tallyBit;
+		for (var i=2; i&lt;length; i = i+3){
+			/**
+			 * When the source tally changes, this event will be fired. &lt;br>
+			 *
+			 * @event Device#sourceTally
+			 * @property {Number} sourceID the id of the source
+			 * @property {SourceState} state
+			 */
+
+			source = data.readUInt16BE(i);
+			tallyBit = data[i+2];
+
+			atem.emit('sourceTally', source, {
+				program: (tallyBit &amp; 1) === 1,
+				preview: (tallyBit &amp; 2) === 2
 			});
 		}
 	});
@@ -746,7 +796,10 @@ function Device(atemIpAddress){
 		// todo inspect the other bytes in PrgI
 	});
 
-
+	this.on('_pin', function(data) {
+		const productName = parseString(data);
+		atem.emit('productNameChange', productName);
+	});
 
 
 
@@ -757,13 +810,16 @@ function Device(atemIpAddress){
 	 * @method
 	 */
 	this.connect = function() {
-		if (typeof atem.state === 'undefined') { 
-			
+
+		if (atem.state === ConnectionState.closed) { 
 			uid = Math.round(Math.random() * 0x7FF);
 			ls = 0;
 			
 			if (atem.ip) {
-				atem.state = 0;
+				atem.state = ConnectionState.attempting;
+
+				socket = dgram.createSocket('udp4');
+				socket.on('message', messageHandler);
 
 				const connectPacket = new UserPacket(null);
 				connectPacket.transmit();
@@ -785,37 +841,41 @@ function Device(atemIpAddress){
 		pendingPackets.forEach(function(packet) {
 			packet.markAsRead();
 		});
-		atem.state = undefined;
+		atem.state = ConnectionState.closed;
+
+		if (socket) socket.close();
 		
-		callback();
+		if (callback) callback();
 	}
 
-	socket.on('message', function(msg, rInfo) {
+	function messageHandler(msg, rInfo) {
 		const packet = new AtemPacket(msg);
 
 		if (uid == packet.header.uid || packet.isConnect()) {
 			if (packet.isAck() || packet.isConnect())
 				packet.removePendingPackets();
 
-			if (state!=1 &amp;&amp; packet.isSync() || packet.isConnect())
+			if (state!=ConnectionState.establishing &amp;&amp; packet.isSync() || packet.isConnect())
 				packet.acknowledge();
 
 			clearTimeout(communicationTimeout);
 			if (!packet.isConnect()) {
-			communicationTimeout = setTimeout(function() {
-				/**
-				 * When the connection with the atem is lost, this event will be fired.
-				 * @event Device#connectionLost
-				 */
-				atem.emit('connectionLost');
-			}, 800);
+				communicationTimeout = setTimeout(function() {
+					/**
+					 * When the connection with the atem is lost, this event will be fired.
+					 * @event Device#connectionLost
+					 */
+					atem.emit('connectionLost');
+				}, 800);
+			}
 		}
-		}
-	});
+	}
 
 	// set ip if provided
-	if (typeof atemIpAddress != 'undefined')
+	if (typeof atemIpAddress != 'undefined') {
 		this.ip = atemIpAddress;
+		this.connect();
+	}
 }
 
 
@@ -978,8 +1038,11 @@ Command.prototype.serialize = function() {
 	return Buffer.concat([header, this.data]);
 };
 
-module.exports = Device;
-</code></pre>
+
+Device.ConnectionState = ConnectionState;
+Device.getSourceInfo = lookupSourceID;
+
+module.exports = Device;</code></pre>
         </article>
     </section>
 
@@ -989,13 +1052,13 @@ module.exports = Device;
 </div>
 
 <nav>
-    <h2><a href="index.html">Index</a></h2><h3>Classes</h3><ul><li><a href="AtemPacket.html">AtemPacket</a></li><li><a href="Command.html">Command</a></li><li><a href="Device.html">Device</a></li><li><a href="UserPacket.html">UserPacket</a></li></ul><h3>Events</h3><ul><li><a href="Device.html#event:connectionLost">connectionLost</a></li><li><a href="Device.html#event:connectionStateChange">connectionStateChange</a></li><li><a href="Device.html#event:error">error</a></li><li><a href="Device.html#event:inputTally">inputTally</a></li><li><a href="Device.html#event:messageTimeout">messageTimeout</a></li><li><a href="Device.html#event:previewBus">previewBus</a></li><li><a href="Device.html#event:programBus">programBus</a></li><li><a href="Device.html#event:rawCommand">rawCommand</a></li><li><a href="Device.html#event:sourceConfiguration">sourceConfiguration</a></li></ul><h3>Namespaces</h3><ul><li><a href="Packet.html">Packet</a></li></ul><h3>Global</h3><ul><li><a href="global.html#flags">flags</a></li><li><a href="global.html#lookupSourceID">lookupSourceID</a></li><li><a href="global.html#pad">pad</a></li><li><a href="global.html#parseString">parseString</a></li><li><a href="global.html#videoInterfaceNames">videoInterfaceNames</a></li><li><a href="global.html#videoInterfaceNumbers">videoInterfaceNumbers</a></li></ul>
+    <h2><a href="index.html">Index</a></h2><h3>Classes</h3><ul><li><a href="AtemPacket.html">AtemPacket</a></li><li><a href="Command.html">Command</a></li><li><a href="Device.html">Device</a></li><li><a href="UserPacket.html">UserPacket</a></li></ul><h3>Events</h3><ul><li><a href="Device.html#event:connectionLost">connectionLost</a></li><li><a href="Device.html#event:connectionStateChange">connectionStateChange</a></li><li><a href="Device.html#event:error">error</a></li><li><a href="Device.html#event:inputTally">inputTally</a></li><li><a href="Device.html#event:messageTimeout">messageTimeout</a></li><li><a href="Device.html#event:previewBus">previewBus</a></li><li><a href="Device.html#event:programBus">programBus</a></li><li><a href="Device.html#event:rawCommand">rawCommand</a></li><li><a href="Device.html#event:sourceConfiguration">sourceConfiguration</a></li><li><a href="Device.html#event:sourceTally">sourceTally</a></li></ul><h3>Namespaces</h3><ul><li><a href="Packet.html">Packet</a></li></ul><h3>Global</h3><ul><li><a href="global.html#flags">flags</a></li><li><a href="global.html#lookupSourceID">lookupSourceID</a></li><li><a href="global.html#pad">pad</a></li><li><a href="global.html#parseString">parseString</a></li><li><a href="global.html#setAux">setAux</a></li><li><a href="global.html#videoInterfaceNames">videoInterfaceNames</a></li><li><a href="global.html#videoInterfaceNumbers">videoInterfaceNumbers</a></li></ul>
 </nav>
 
 <br clear="both">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha8</a> on Thu Sep 11 2014 13:53:10 GMT+0200 (CEST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha8</a> on Wed Apr 15 2015 01:33:17 GMT+0200 (CEST)
 </footer>
 
 <script> prettyPrint(); </script>
