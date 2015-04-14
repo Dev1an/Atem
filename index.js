@@ -33,7 +33,7 @@ for(name in ConnectionState) {
  */
 
 /**
- * The ID of a an ATEM source. If you need to know more info of a specified source use {@link lookupSourceID}
+ * The ID of a an ATEM source. If you need to know more info of a specified source use {@link getSourceInfo}
  * @typedef {Number} SourceID
  */
 
@@ -95,7 +95,7 @@ function pad(number, size) {
  * @param {SourceID} id The source identification number
  * @returns {{type: String, index: Number}}
  */
-function lookupSourceID(id) {
+function getSourceInfo(id) {
 	if (id === 0) {
 		return {type: 'black'}
 	}
@@ -1013,6 +1013,6 @@ Command.prototype.serialize = function() {
 
 
 Device.ConnectionState = ConnectionState;
-Device.getSourceInfo = lookupSourceID;
+Device.getSourceInfo = getSourceInfo;
 
 module.exports = Device;
