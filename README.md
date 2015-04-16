@@ -1,5 +1,5 @@
 # Atem
-Implementation of BlackMagicDesign's ATEM communication protocol (version 6.1).
+Implementation of BlackMagicDesign's ATEM communication protocol (version 6.1) in javascript (written for nodejs).
 
 ## Usage
 ### Connect to an atem
