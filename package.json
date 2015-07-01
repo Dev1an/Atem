@@ -1,6 +1,6 @@
 {
   "name": "atem",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Implementation of BlackMagicDesign's ATEM communication protocol.",
   "main": "index.js",
   "dependencies": {},
