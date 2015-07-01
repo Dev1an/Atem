@@ -769,6 +769,19 @@ function Device(atemIpAddress){
 		// todo inspect the other bytes in PrgI
 	});
 
+	this.on('AuxS', function(d) {
+		const aux = d[0] + 8001;
+		const source = d.readUInt16BE(2);
+
+		/**
+		 * When an auxiliary output changes, this event will be fired.
+		 * @event Device#auxiliaryOutput
+		 * @property {SourceID} aux The id of the auxiliary output
+		 * @property {SourceID} source The id of the source that is assigned to the auxiliary output
+		 */
+		atem.emit('auxiliaryOutput', aux, source);
+	});
+
 	this.on('_pin', function(data) {
 		const productName = parseString(data);
 		atem.emit('productNameChange', productName);
