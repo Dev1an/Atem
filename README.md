@@ -20,7 +20,7 @@ To receive notifications about the connection state:
 ```js
 var Atem = require('atem') // Load the atem module
 var myAtemDevice = new Atem() // Create a new Atem instace without an IP address
-atem.on('connectionStateChange', function(state) {
+myAtemDevice.on('connectionStateChange', function(state) {
   console.log('state', state);
 });
 ```
