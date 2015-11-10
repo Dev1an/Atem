@@ -574,6 +574,16 @@ function Device(atemIpAddress){
 	};
 
 	/**
+	 * Performs an auto transition between preview and program
+	 * @function Device#auto
+	 */
+	this.auto = function() {
+		const data = new Buffer(4);
+		data.fill(0);
+		self.sendCommand(new Command('DAut', data));
+	};
+
+	/**
 	 * Changes the specified options of the Source Configuration. Note that you don't need to specify all
 	 * the properties of {@link SourceConfiguration}.
 	 * @function Device#changeSourceConfiguration
