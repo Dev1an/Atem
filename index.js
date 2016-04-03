@@ -354,7 +354,7 @@ function Device(atemIpAddress){
 		// If it's the first time this packet is sent
 		if (pendingPackets.indexOf(this) == -1 && !this.serializedCache) {
 			this.header.uid = uid;
-			
+
 			if ( this.isSync() || this.isConnect() ) {
 				this.header.ls = ls;
 			}
@@ -441,7 +441,7 @@ function Device(atemIpAddress){
 		this.header.ls  = msg.readUInt16BE(10);
 
 		if ((this.header.flags & flags.unknown) == flags.unknown) console.log('Unknown Packet flag!');
-		
+
 		if (state === ConnectionState.attempting) {
 			if (this.isSync()){
 				atem.state = ConnectionState.establishing;
@@ -475,7 +475,7 @@ function Device(atemIpAddress){
 				 * @event Device#rawCommand
 				 * @type {Command}
 				 */
-				
+
 				// todo: check foreign sequence number, to prevent the event emitter
 				// from emitting the same message twice.
 				atem.emit('rawCommand', cmd);
@@ -550,8 +550,8 @@ function Device(atemIpAddress){
 		return count
 	}
 
-	
-	
+
+
 
 	this.sendCommand = function(cmd) {
 		commandQueue = commandQueue.concat(cmd);
@@ -657,39 +657,38 @@ function Device(atemIpAddress){
 		const cmd = new Command('CPvI', data);
 		atem.sendCommand(cmd);
 	};
-	
+
 	/**
 	 * Change the auxiliary output
-	 * @param {SourceID} aux    
-	 * @param {SourceID} source 
+	 * @param {SourceID} aux
+	 * @param {SourceID} source
 	 */
 	this.setAux = function(aux, source){
-		var data = new Buffer(8);
+		var data = new Buffer(4);
 		data[0] = 1;
 		data[1] = aux - 8001;
 		data.writeUInt16BE(source, 2);
-		data.writeUInt32BE(0, 4);
 
 		const cmd = new Command('CAuS', data);
 		atem.sendCommand(cmd);
 	}
-	
-	
-	
+
+
+
 
 	this.on('connected', function() {
 		sync();
 	});
-	
+
 	this.on('messageTimeout', function() {
-		
+
 	});
-	
+
 	this.on('connectionLost', function() {
 		console.log('Connection Lost');
 		atem.disconnect(atem.connect);
 	});
-	
+
 	this.on('InPr', function(d) {
 		const sourceID = d.readUInt16BE(0);
 
@@ -807,10 +806,10 @@ function Device(atemIpAddress){
 	 */
 	this.connect = function() {
 
-		if (atem.state === ConnectionState.closed) { 
+		if (atem.state === ConnectionState.closed) {
 			uid = Math.round(Math.random() * 0x7FF);
 			ls = 0;
-			
+
 			if (atem.ip) {
 				atem.state = ConnectionState.attempting;
 
@@ -823,7 +822,7 @@ function Device(atemIpAddress){
 				const err = new Error('IP not set');
 				atem.emit('error', err);
 			}
-			
+
 		} else {
 			atem.disconnect(atem.connect);
 		}
@@ -831,7 +830,7 @@ function Device(atemIpAddress){
 
 	this.disconnect = function(callback) {
 		console.log('Disconnecting');
-		
+
 		clearInterval(syncInterval);
 		clearTimeout(communicationTimeout);
 		pendingPackets.forEach(function(packet) {
@@ -840,7 +839,7 @@ function Device(atemIpAddress){
 		atem.state = ConnectionState.closed;
 
 		if (socket) socket.close();
-		
+
 		if (callback) callback();
 	}
 
