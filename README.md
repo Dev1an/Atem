@@ -1,6 +1,6 @@
 # Atem
 
-Implementation of BlackMagicDesign's ATEM communication protocol (version 6.7) in javascript (written for nodejs).
+Implementation of BlackMagicDesign's ATEM communication protocol (version 6.8) in javascript (written for nodejs).
 
 [![Join the chat at https://gitter.im/Dev1an/Atem](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Dev1an/Atem?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 ![Licensed under MIT](https://img.shields.io/badge/License-MIT-blue.svg)
