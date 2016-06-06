@@ -28,4 +28,17 @@ myAtemDevice.on('connectionStateChange', function(state) {
   console.log('state', state);
 });
 ```
+
+These events are currently implemented: 
+- previewBus
+- programBus
+- inputTally
+- sourceTally
+- sourceConfiguration
+- auxiliaryOutput
+- connectionStateChange
+- connectionLost
+
+If you need other events, create an issue. You can also fall back to the `rawCommand` event and interpret the raw data coming from the atem yourself.
+
 You can read more about all the available events in the [API reference](http://dev1an.github.io/Atem/Device.html)
