@@ -14,7 +14,7 @@ atem.on('sourceConfiguration', function(id, config, info) {
 });
 
 atem.on('programBus', function(source) {
-	console.log('program bus changed to', source);
+	console.log('program bus changed to', source.source);
 });
 
 atem.ip = "10.1.0.210";

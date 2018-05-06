@@ -753,28 +753,40 @@ function Device(atemIpAddress){
 	});
 
 	this.on('PrvI', function(d) {
-		const source = d.readUInt16BE(2),
+		const me = d.readUInt8(0);
+		const source = d.readUInt16BE(2)
 			inTransition = (d[4] & 1) === 1;
 
 		/**
 		 * When the selected preview bus changes this event will be fired.
 		 * @event Device#previewBus
-		 * @property {SourceID} source The new preview source
+		 * @property {number} me 0 for M/E 1, 1 for M/E 2
+		 * @property {number} source The new preview source
+		 * @property {boolean} inTransition Is this currently dissolving?
 		 */
-		atem.emit('previewBus', source, inTransition);
+		atem.emit('previewBus', {
+			me,
+			source, 
+			inTransition
+		});
 
 		// todo inspect the other bytes in PrvI
 	});
 
 	this.on('PrgI', function(d) {
+		const me = d.readUInt8(0);
 		const source = d.readUInt16BE(2);
 
 		/**
 		 * When the selected program bus changes this event will be fired.
 		 * @event Device#programBus
-		 * @property {SourceID} source The new program source
+		 * @property {number} me 0 for M/E 1, 1 for M/E 2
+		 * @property {number} source The new program source
 		 */
-		atem.emit('programBus', source);
+		atem.emit('programBus', {
+			me,
+			source
+		});
 		// todo inspect the other bytes in PrgI
 	});
 
