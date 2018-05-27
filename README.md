@@ -5,7 +5,7 @@ Implementation of BlackMagicDesign's ATEM communication protocol (version 6.8) i
 [![Join the chat at https://gitter.im/Dev1an/Atem](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Dev1an/Atem?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 ![Licensed under MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
-### Recent development
+### ⚠️ Recent development 🚨
 
 This library is more than 3 years old and although I am still maintaining it, I started a new version of the implementation written from the ground up in Swift. It is developed under [Swift-Atem](https://github.com/Dev1an/Swift-Atem) and implements the protocol in a more flexible manner. The same code can be used to implement both directions of the protocol. This means that you can not only use it to control atem switchers but also to connect to your control panels without the need for a switcher. Opening a whole new world of applications for the Atem control panels.
 
